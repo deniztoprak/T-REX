@@ -284,6 +284,26 @@ describe('Compliance Module: TransferRestrict', () => {
   });
 
   describe('.moduleCheck', () => {
+    describe('when sender and receiver are allowed', () => {
+      it('should return false', async () => {
+        const context = await loadFixture(deployTransferRestrictFullSuite);
+        const to = context.accounts.anotherWallet.address;
+        const from = context.accounts.aliceWallet.address;
+
+        await context.suite.compliance.callModuleFunction(
+          new ethers.utils.Interface(['function allowUser(address _userAddress)']).encodeFunctionData('allowUser', [from]),
+          context.suite.complianceModule.address,
+        );
+
+        await context.suite.compliance.callModuleFunction(
+          new ethers.utils.Interface(['function allowUser(address _userAddress)']).encodeFunctionData('allowUser', [to]),
+          context.suite.complianceModule.address,
+        );
+        const result = await context.suite.complianceModule.moduleCheck(from, to, 10, context.suite.compliance.address);
+        expect(result).to.be.true;
+      });
+    });
+
     describe('when sender and receiver are not allowed', () => {
       it('should return false', async () => {
         const context = await loadFixture(deployTransferRestrictFullSuite);
