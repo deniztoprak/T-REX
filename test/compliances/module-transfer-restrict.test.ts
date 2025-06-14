@@ -295,7 +295,7 @@ describe('Compliance Module: TransferRestrict', () => {
     });
 
     describe('when sender is allowed', () => {
-      it('should return true', async () => {
+      it('should return false', async () => {
         const context = await loadFixture(deployTransferRestrictFullSuite);
         const to = context.accounts.aliceWallet.address;
         const from = context.accounts.bobWallet.address;
@@ -306,12 +306,12 @@ describe('Compliance Module: TransferRestrict', () => {
         );
 
         const result = await context.suite.complianceModule.moduleCheck(from, to, 10, context.suite.compliance.address);
-        expect(result).to.be.true;
+        expect(result).to.be.false;
       });
     });
 
     describe('when receiver is allowed', () => {
-      it('should return true', async () => {
+      it('should return false', async () => {
         const context = await loadFixture(deployTransferRestrictFullSuite);
         const to = context.accounts.aliceWallet.address;
         const from = context.accounts.bobWallet.address;
@@ -322,7 +322,7 @@ describe('Compliance Module: TransferRestrict', () => {
         );
 
         const result = await context.suite.complianceModule.moduleCheck(from, to, 10, context.suite.compliance.address);
-        expect(result).to.be.true;
+        expect(result).to.be.false;
       });
     });
 

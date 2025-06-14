@@ -182,11 +182,10 @@ contract TransferRestrictModule is AbstractModuleUpgradeable {
             return true;
         }
 
-        if(_allowedUserAddresses[_compliance][_from]) {
+        if (_allowedUserAddresses[_compliance][_from] && _allowedUserAddresses[_compliance][_to]) {
             return true;
         }
-
-        return _allowedUserAddresses[_compliance][_to];
+        return false;
     }
 
     /**
