@@ -333,6 +333,16 @@ contract MaxBalanceModule is AbstractModuleUpgradeable {
         return true;
     }
 
+   /**
+    *  @dev getter for `_investorIDAddresses` mapping
+    *  @param _compliance the Compliance smart contract to be checked
+    *  @param _identity ONCHAINID address
+    *  returns true if ONCHAINID is in the investors list
+    */
+    function isInvestorID(address _compliance, address _identity) external view returns (bool) {
+        return _investorIDAddresses[_compliance][_identity];
+    }
+
     /**
     *  @dev getter for compliance identity balance
      *  @param _compliance address of the compliance contract
