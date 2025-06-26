@@ -321,12 +321,13 @@ contract MaxBalanceModule is AbstractModuleUpgradeable {
         address _compliance
     ) external view override returns (bool) {
         address _id = _getIdentity(_compliance, _to);
+        uint256 maxIDBalance = getMaxIDBalance(_compliance, _id);
 
-        if (_value > getMaxIDBalance(_compliance, _id)) {
+        if (_value > maxIDBalance) {
             return false;
         }
 
-        if ((_IDBalance[_compliance][_id] + _value) >  getMaxIDBalance(_compliance, _id)) {
+        if ((_IDBalance[_compliance][_id] + _value) > maxIDBalance) {
             return false;
         }
         return true;
