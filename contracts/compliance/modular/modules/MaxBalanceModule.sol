@@ -78,7 +78,7 @@ contract MaxBalanceModule is AbstractModuleUpgradeable {
     /// state variables
 
     /// enum to define the type of user
-    enum UserType { Normal, Investor }
+    enum UserType { New, Investor }
 
     /// mapping of preset status of compliance addresses
     mapping(address => bool) private _compliancePresetStatus;
@@ -112,10 +112,10 @@ contract MaxBalanceModule is AbstractModuleUpgradeable {
     /**
      *  this event is emitted when the max balance has been set for a compliance bound.
      *  `_compliance` is the address of modular compliance concerned
-     *  `_normalMaxBalance` is the max amount of tokens that a normal user can hold .
+     *  `_newUserMaxBalance` is the max amount of tokens that a new user can hold .
      *  `_investorMaxBalance` is the max amount of tokens that an investor can hold .
      */
-    event MaxBalanceSet(address indexed _compliance, uint256 indexed _normalMaxBalance, uint256 indexed _investorMaxBalance);
+    event MaxBalanceSet(address indexed _compliance, uint256 indexed _newUserMaxBalance, uint256 indexed _investorMaxBalance);
 
     event IDBalancePreSet(address indexed _compliance, address indexed _id, uint256 _balance);
 
@@ -200,16 +200,16 @@ contract MaxBalanceModule is AbstractModuleUpgradeable {
 
     /**
      *  @dev sets max balance limit for a bound compliance contract
-     *  @param _normalMax max amount of tokens owned by a normal user
+     *  @param _newUserMaxBalance max amount of tokens owned by a new user
      *  @param _investorMax max amount of tokens owned by an investor
      *  Only the owner of the Compliance smart contract can call this function
      *  emits an `MaxBalanceSet` event
      */
-    function setMaxBalance(uint256 _normalMax, uint256 _investorMax) external onlyComplianceCall {
-        _maxBalance[msg.sender][UserType.Normal] = _normalMax;
+    function setMaxBalance(uint256 _newUserMaxBalance, uint256 _investorMax) external onlyComplianceCall {
+        _maxBalance[msg.sender][UserType.New] = _newUserMaxBalance;
         _maxBalance[msg.sender][UserType.Investor] = _investorMax;
 
-        emit MaxBalanceSet(msg.sender, _normalMax, _investorMax);
+        emit MaxBalanceSet(msg.sender, _newUserMaxBalance, _investorMax);
     }
 
     /**
@@ -362,7 +362,7 @@ contract MaxBalanceModule is AbstractModuleUpgradeable {
             return _maxBalance[_compliance][UserType.Investor];
         }
 
-        return _maxBalance[_compliance][UserType.Normal];
+        return _maxBalance[_compliance][UserType.New];
     }
 
     /**
