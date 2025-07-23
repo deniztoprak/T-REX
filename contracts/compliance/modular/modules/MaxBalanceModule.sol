@@ -201,15 +201,15 @@ contract MaxBalanceModule is AbstractModuleUpgradeable {
     /**
      *  @dev sets max balance limit for a bound compliance contract
      *  @param _newUserMaxBalance max amount of tokens owned by a new user
-     *  @param _investorMax max amount of tokens owned by an investor
+     *  @param _investorMaxBalance max amount of tokens owned by an investor
      *  Only the owner of the Compliance smart contract can call this function
      *  emits an `MaxBalanceSet` event
      */
-    function setMaxBalance(uint256 _newUserMaxBalance, uint256 _investorMax) external onlyComplianceCall {
+    function setMaxBalance(uint256 _newUserMaxBalance, uint256 _investorMaxBalance) external onlyComplianceCall {
         _maxBalance[msg.sender][UserType.New] = _newUserMaxBalance;
-        _maxBalance[msg.sender][UserType.Investor] = _investorMax;
+        _maxBalance[msg.sender][UserType.Investor] = _investorMaxBalance;
 
-        emit MaxBalanceSet(msg.sender, _newUserMaxBalance, _investorMax);
+        emit MaxBalanceSet(msg.sender, _newUserMaxBalance, _investorMaxBalance);
     }
 
     /**
