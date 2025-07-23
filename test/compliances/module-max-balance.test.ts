@@ -82,26 +82,26 @@ describe('Compliance Module: MaxBalance', () => {
     });
   });
 
-  describe('.setMaxBalance', () => {
+  describe('.setDefaultMaxBalance', () => {
     describe('when calling directly', () => {
       it('should revert', async () => {
         const context = await loadFixture(deployMaxBalanceFullSuite);
 
-        await expect(context.suite.complianceModule.setMaxBalance(100, 500)).to.revertedWith('only bound compliance can call');
+        await expect(context.suite.complianceModule.setDefaultMaxBalance(100)).to.revertedWith('only bound compliance can call');
       });
     });
 
     describe('when calling via compliance', () => {
-      it('should set max balance', async () => {
+      it('should set default max balance', async () => {
         const context = await loadFixture(deployMaxBalanceFullSuite);
-        const functionSignature = 'function setMaxBalance(uint256 _normalMax, uint256 _investorMax)';
+        const functionSignature = 'function setDefaultMaxBalance(uint256 _maxBalance)';
 
         const tx = await context.suite.compliance.callModuleFunction(
-          new ethers.utils.Interface([functionSignature]).encodeFunctionData('setMaxBalance', [100, 500]),
+          new ethers.utils.Interface([functionSignature]).encodeFunctionData('setDefaultMaxBalance', [100]),
           context.suite.complianceModule.address,
         );
 
-        await expect(tx).to.emit(context.suite.complianceModule, 'MaxBalanceSet').withArgs(context.suite.compliance.address, 100, 500);
+        await expect(tx).to.emit(context.suite.complianceModule, 'DefaultMaxBalanceSet').withArgs(context.suite.compliance.address, 100);
       });
     });
   });
@@ -330,10 +330,10 @@ describe('Compliance Module: MaxBalance', () => {
           const context = await loadFixture(deployMaxBalanceFullSuite);
           const from = context.accounts.aliceWallet.address;
           const to = context.accounts.bobWallet.address;
-          const functionSignature = 'function setMaxBalance(uint256 _normalMax, uint256 _investorMax)';
+          const functionSignature = 'function setDefaultMaxBalance(uint256 _maxBalance)';
 
           await context.suite.compliance.callModuleFunction(
-            new ethers.utils.Interface([functionSignature]).encodeFunctionData('setMaxBalance', [150, 500]),
+            new ethers.utils.Interface([functionSignature]).encodeFunctionData('setDefaultMaxBalance', [150]),
             context.suite.complianceModule.address,
           );
 
@@ -346,7 +346,7 @@ describe('Compliance Module: MaxBalance', () => {
           );
 
           await context.suite.compliance.callModuleFunction(
-            new ethers.utils.Interface([functionSignature]).encodeFunctionData('setMaxBalance', [100, 500]),
+            new ethers.utils.Interface([functionSignature]).encodeFunctionData('setDefaultMaxBalance', [100]),
             context.suite.complianceModule.address,
           );
 
@@ -377,10 +377,10 @@ describe('Compliance Module: MaxBalance', () => {
           const to = context.accounts.bobWallet.address;
           const senderIdentity = await context.suite.identityRegistry.identity(context.accounts.aliceWallet.address);
           const receiverIdentity = await context.suite.identityRegistry.identity(context.accounts.bobWallet.address);
-          const functionSignature = 'function setMaxBalance(uint256 _normalMax, uint256 _investorMax)';
+          const functionSignature = 'function setDefaultMaxBalance(uint256 _maxBalance)';
 
           await context.suite.compliance.callModuleFunction(
-            new ethers.utils.Interface([functionSignature]).encodeFunctionData('setMaxBalance', [150, 500]),
+            new ethers.utils.Interface([functionSignature]).encodeFunctionData('setDefaultMaxBalance', [150]),
             context.suite.complianceModule.address,
           );
 
@@ -425,10 +425,10 @@ describe('Compliance Module: MaxBalance', () => {
         it('should revert', async () => {
           const context = await loadFixture(deployMaxBalanceFullSuite);
           const to = context.accounts.aliceWallet.address;
-          const functionSignature = 'function setMaxBalance(uint256 _normalMax, uint256 _investorMax)';
+          const functionSignature = 'function setDefaultMaxBalance(uint256 _maxBalance)';
 
           await context.suite.compliance.callModuleFunction(
-            new ethers.utils.Interface([functionSignature]).encodeFunctionData('setMaxBalance', [150, 500]),
+            new ethers.utils.Interface([functionSignature]).encodeFunctionData('setDefaultMaxBalance', [150]),
             context.suite.complianceModule.address,
           );
 
@@ -449,10 +449,10 @@ describe('Compliance Module: MaxBalance', () => {
           const context = await loadFixture(deployMaxBalanceFullSuite);
           const to = context.accounts.aliceWallet.address;
           const receiverIdentity = await context.suite.identityRegistry.identity(context.accounts.aliceWallet.address);
-          const functionSignature = 'function setMaxBalance(uint256 _normalMax, uint256 _investorMax)';
+          const functionSignature = 'function setDefaultMaxBalance(uint256 _maxBalance)';
 
           await context.suite.compliance.callModuleFunction(
-            new ethers.utils.Interface([functionSignature]).encodeFunctionData('setMaxBalance', [150, 500]),
+            new ethers.utils.Interface([functionSignature]).encodeFunctionData('setDefaultMaxBalance', [150]),
             context.suite.complianceModule.address,
           );
 
@@ -483,10 +483,10 @@ describe('Compliance Module: MaxBalance', () => {
         const context = await loadFixture(deployMaxBalanceFullSuite);
         const from = context.accounts.aliceWallet.address;
         const senderIdentity = await context.suite.identityRegistry.identity(context.accounts.aliceWallet.address);
-        const functionSignature = 'function setMaxBalance(uint256 _normalMax, uint256 _investorMax)';
+        const functionSignature = 'function setDefaultMaxBalance(uint256 _maxBalance)';
 
         await context.suite.compliance.callModuleFunction(
-          new ethers.utils.Interface([functionSignature]).encodeFunctionData('setMaxBalance', [150, 500]),
+          new ethers.utils.Interface([functionSignature]).encodeFunctionData('setDefaultMaxBalance', [150]),
           context.suite.complianceModule.address,
         );
 
@@ -512,10 +512,10 @@ describe('Compliance Module: MaxBalance', () => {
         const context = await loadFixture(deployMaxBalanceFullSuite);
         const to = context.accounts.anotherWallet.address;
         const from = context.accounts.aliceWallet.address;
-        const functionSignature = 'function setMaxBalance(uint256 _normalMax, uint256 _investorMax)';
+        const functionSignature = 'function setDefaultMaxBalance(uint256 _maxBalance)';
 
         await context.suite.compliance.callModuleFunction(
-          new ethers.utils.Interface([functionSignature]).encodeFunctionData('setMaxBalance', [150, 500]),
+          new ethers.utils.Interface([functionSignature]).encodeFunctionData('setDefaultMaxBalance', [150]),
           context.suite.complianceModule.address,
         );
 
@@ -525,15 +525,15 @@ describe('Compliance Module: MaxBalance', () => {
       });
     });
 
-    describe('when value exceeds compliance max balance', () => {
+    describe('when value exceeds default max balance', () => {
       it('should return false', async () => {
         const context = await loadFixture(deployMaxBalanceFullSuite);
         const to = context.accounts.aliceWallet.address;
         const from = context.accounts.bobWallet.address;
-        const functionSignature = 'function setMaxBalance(uint256 _normalMax, uint256 _investorMax)';
+        const functionSignature = 'function setDefaultMaxBalance(uint256 _maxBalance)';
 
         await context.suite.compliance.callModuleFunction(
-          new ethers.utils.Interface([functionSignature]).encodeFunctionData('setMaxBalance', [150, 500]),
+          new ethers.utils.Interface([functionSignature]).encodeFunctionData('setDefaultMaxBalance', [150]),
           context.suite.complianceModule.address,
         );
 
@@ -542,15 +542,39 @@ describe('Compliance Module: MaxBalance', () => {
       });
     });
 
-    describe('when user balance exceeds compliance max balance', () => {
+    describe('when value exceeds ID max balance', () => {
       it('should return false', async () => {
         const context = await loadFixture(deployMaxBalanceFullSuite);
         const to = context.accounts.aliceWallet.address;
         const from = context.accounts.bobWallet.address;
-        const functionSignature = 'function setMaxBalance(uint256 _normalMax, uint256 _investorMax)';
+        let functionSignature = 'function setDefaultMaxBalance(uint256 _maxBalance)';
 
         await context.suite.compliance.callModuleFunction(
-          new ethers.utils.Interface([functionSignature]).encodeFunctionData('setMaxBalance', [150, 500]),
+          new ethers.utils.Interface([functionSignature]).encodeFunctionData('setDefaultMaxBalance', [150]),
+          context.suite.complianceModule.address,
+        );
+
+        functionSignature = 'function setUserMaxBalance(address _userAddress, uint256 _maxBalance)';
+
+        await context.suite.compliance.callModuleFunction(
+          new ethers.utils.Interface([functionSignature]).encodeFunctionData('setUserMaxBalance', [to, 100]),
+          context.suite.complianceModule.address,
+        );
+
+        const result = await context.suite.complianceModule.moduleCheck(from, to, 150, context.suite.compliance.address);
+        expect(result).to.be.false;
+      });
+    });
+
+    describe('when user balance exceeds default max balance', () => {
+      it('should return false', async () => {
+        const context = await loadFixture(deployMaxBalanceFullSuite);
+        const to = context.accounts.aliceWallet.address;
+        const from = context.accounts.bobWallet.address;
+        const functionSignature = 'function setDefaultMaxBalance(uint256 _maxBalance)';
+
+        await context.suite.compliance.callModuleFunction(
+          new ethers.utils.Interface([functionSignature]).encodeFunctionData('setDefaultMaxBalance', [150]),
           context.suite.complianceModule.address,
         );
 
@@ -564,15 +588,68 @@ describe('Compliance Module: MaxBalance', () => {
       });
     });
 
-    describe('when user balance does not exceed compliance max balance', () => {
+    describe('when user balance exceeds ID max balance', () => {
+      it('should return false', async () => {
+        const context = await loadFixture(deployMaxBalanceFullSuite);
+        const to = context.accounts.aliceWallet.address;
+        const from = context.accounts.bobWallet.address;
+        let functionSignature = 'function setDefaultMaxBalance(uint256 _maxBalance)';
+
+        await context.suite.compliance.callModuleFunction(
+          new ethers.utils.Interface([functionSignature]).encodeFunctionData('setDefaultMaxBalance', [150]),
+          context.suite.complianceModule.address,
+        );
+
+        functionSignature = 'function setUserMaxBalance(address _userAddress, uint256 _maxBalance)';
+
+        await context.suite.compliance.callModuleFunction(
+          new ethers.utils.Interface([functionSignature]).encodeFunctionData('setUserMaxBalance', [to, 100]),
+          context.suite.complianceModule.address,
+        );
+
+        await context.suite.compliance.callModuleFunction(
+          new ethers.utils.Interface(['function moduleMintAction(address _to, uint256 _value)']).encodeFunctionData('moduleMintAction', [to, 50]),
+          context.suite.complianceModule.address,
+        );
+
+        const result = await context.suite.complianceModule.moduleCheck(from, to, 70, context.suite.compliance.address);
+        expect(result).to.be.false;
+      });
+    });
+
+    describe('when user balance does not exceed default max balance', () => {
       it('should return true', async () => {
         const context = await loadFixture(deployMaxBalanceFullSuite);
         const to = context.accounts.aliceWallet.address;
         const from = context.accounts.bobWallet.address;
-        const functionSignature = 'function setMaxBalance(uint256 _normalMax, uint256 _investorMax)';
+        const functionSignature = 'function setDefaultMaxBalance(uint256 _maxBalance)';
 
         await context.suite.compliance.callModuleFunction(
-          new ethers.utils.Interface([functionSignature]).encodeFunctionData('setMaxBalance', [150, 500]),
+          new ethers.utils.Interface([functionSignature]).encodeFunctionData('setDefaultMaxBalance', [150]),
+          context.suite.complianceModule.address,
+        );
+
+        const result = await context.suite.complianceModule.moduleCheck(from, to, 70, context.suite.compliance.address);
+        expect(result).to.be.true;
+      });
+    });
+
+    describe('when user balance does not exceed ID max balance', () => {
+      it('should return true', async () => {
+        const context = await loadFixture(deployMaxBalanceFullSuite);
+        const to = context.accounts.aliceWallet.address;
+        const from = context.accounts.bobWallet.address;
+        let functionSignature = 'function setDefaultMaxBalance(uint256 _maxBalance)';
+
+        await context.suite.compliance.callModuleFunction(
+          new ethers.utils.Interface([functionSignature]).encodeFunctionData('setDefaultMaxBalance', [150]),
+          context.suite.complianceModule.address,
+        );
+
+        functionSignature = 'function setUserMaxBalance(address _userAddress, uint256 _maxBalance)';
+
+        await context.suite.compliance.callModuleFunction(
+          new ethers.utils.Interface([functionSignature]).encodeFunctionData('setUserMaxBalance', [to, 70]),
           context.suite.complianceModule.address,
         );
 
