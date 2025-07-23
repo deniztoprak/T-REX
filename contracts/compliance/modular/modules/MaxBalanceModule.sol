@@ -77,45 +77,36 @@ contract MaxBalanceModule is AbstractModuleUpgradeable {
 
     /// state variables
 
-    /// enum to define the type of user
-    enum UserType { New, Investor }
-
     /// mapping of preset status of compliance addresses
     mapping(address => bool) private _compliancePresetStatus;
 
-    /// maximum balance per ID type per modular compliance
-    mapping(address => mapping(UserType => uint256)) private _maxBalance;
+    /// mapping of default maximum balances of compliance addresses
+    mapping(address => uint256) private _defaultMaxBalance;
 
     /// mapping of balances per ONCHAINID per modular compliance
     // solhint-disable-next-line var-name-mixedcase
     mapping(address => mapping(address => uint256)) private _IDBalance;
 
-    /// mapping of investor ONCHAINID per modular compliance
-    mapping(address => mapping(address => bool)) private _investorIDAddresses;
+    /// mapping of maximum balances per ONCHAINID per modular compliance
+    mapping(address => mapping(address => uint256)) private _IDMaxBalance;
+
 
     /// events
 
     /**
-     *  this event is emitted when an investor is added
-     *  `_compliance` is the compliance address.
-     *  `_userAddress` is the user address
-     */
-    event InvestorAdded(address _compliance, address _userAddress);
-
-    /**
-     *  this event is emitted when an investor is removed
-     *  `_compliance` is the compliance address.
-     *  `_userAddress` is the removed user address
-     */
-    event InvestorRemoved(address _compliance, address _userAddress);
-
-    /**
-     *  this event is emitted when the max balance has been set for a compliance bound.
+     *  this event is emitted when the default max balance has been set for a compliance bound.
      *  `_compliance` is the address of modular compliance concerned
-     *  `_newUserMaxBalance` is the max amount of tokens that a new user can hold .
-     *  `_investorMaxBalance` is the max amount of tokens that an investor can hold .
+     *  `_maxBalance` is the max amount of tokens that the user can hold .
      */
-    event MaxBalanceSet(address indexed _compliance, uint256 indexed _newUserMaxBalance, uint256 indexed _investorMaxBalance);
+    event DefaultMaxBalanceSet(address indexed _compliance, uint256 indexed _maxBalance);
+
+    /**
+     *  this event is emitted when the max balance of an ONCHAINID has been set for a compliance bound.
+     *  `_compliance` is the address of modular compliance concerned
+     *  `_id` the ONCHAINID address of the token holder
+     *  `_maxBalance` is the max amount of tokens that the user can hold .
+     */
+    event IDMaxBalanceSet(address indexed _compliance, address indexed _id, uint256 indexed _maxBalance);
 
     event IDBalancePreSet(address indexed _compliance, address indexed _id, uint256 _balance);
 
@@ -141,75 +132,48 @@ contract MaxBalanceModule is AbstractModuleUpgradeable {
     }
 
     /**
-     *  @dev adds an investor.
-     *  @param _userAddress is the address of the user
+     *  @dev sets the default max balance limit for a bound compliance contract
+     *  @param _maxBalance is the new max balance
      *  Only the owner of the Compliance smart contract can call this function
-     *  emits an `InvestorAdded` event
+     *  emits an `DefaultMaxBalanceSet` event
      */
-    function addInvestor(address _userAddress) external onlyComplianceCall {
-        address _userID = _getIdentity(msg.sender, _userAddress);
-        _investorIDAddresses[msg.sender][_userID] = true;
+    function setDefaultMaxBalance(uint256 _maxBalance) external onlyComplianceCall {
+        _defaultMaxBalance[msg.sender] = _maxBalance;
 
-        emit InvestorAdded(msg.sender, _userAddress);
+        emit DefaultMaxBalanceSet(msg.sender, _maxBalance);
     }
 
     /**
-     *  @dev adds multiple investors.
-     *  @param _userAddresses is the array of user addresses
+     *  @dev sets a user's balance limit for a bound compliance contract
+     *  @param _userAddress is the address of the user
+     *  @param _maxBalance is the new max balance of the user
      *  Only the owner of the Compliance smart contract can call this function
-     *  emits an `InvestorAdded` event
+     *  emits an `IDMaxBalanceSet` event
      */
-    function batchAddInvestors(address[] memory _userAddresses) external onlyComplianceCall {
+    function setUserMaxBalance(address _userAddress, uint256 _maxBalance) external onlyComplianceCall {
+        address _userID = _getIdentity(msg.sender, _userAddress);
+        _IDMaxBalance[msg.sender][_userID] = _maxBalance;
+
+        emit IDMaxBalanceSet(msg.sender, _userID, _maxBalance);
+    }
+
+    /**
+     *  @dev sets multiple users balance limit for a bound compliance contract
+     *  @param _userAddresses is the array of user addresses
+     *  @param _maxBalances is the array of new max balances for users
+     *  Only the owner of the Compliance smart contract can call this function
+     *  emits an `IDMaxBalanceSet` event
+     */
+    function batchSetUserMaxBalance(address[] memory _userAddresses, uint256[] memory _maxBalances) external onlyComplianceCall {
         uint256 length = _userAddresses.length;
         for (uint256 i = 0; i < length; i++) {
             address _userAddress = _userAddresses[i];
+            uint256 _maxBalance = _maxBalances[i];
             address _userID = _getIdentity(msg.sender, _userAddress);
-            _investorIDAddresses[msg.sender][_userID] = true;
-            emit InvestorAdded(msg.sender, _userAddress);
+            _IDMaxBalance[msg.sender][_userID] = _maxBalance;
+
+            emit IDMaxBalanceSet(msg.sender, _userID, _maxBalance);
         }
-    }
-
-    /**
-     *  @dev removes an investor.
-     *  @param _userAddress is the address of the user
-     *  Only the owner of the Compliance smart contract can call this function
-     *  emits an `InvestorRemoved` event
-     */
-    function removeInvestor(address _userAddress) external onlyComplianceCall {
-        address _userID = _getIdentity(msg.sender, _userAddress);
-        _investorIDAddresses[msg.sender][_userID] = false;
-
-        emit InvestorRemoved(msg.sender, _userAddress);
-    }
-
-    /**
-     *  @dev removes multiple investors.
-     *  @param _userAddresses is the array of user addresses
-     *  Only the owner of the Compliance smart contract can call this function
-     *  emits an `InvestorRemoved` event
-     */
-    function batchRemoveInvestors(address[] memory _userAddresses) external onlyComplianceCall {
-        uint256 length = _userAddresses.length;
-        for (uint256 i = 0; i < length; i++) {
-            address _userAddress = _userAddresses[i];
-            address _userID = _getIdentity(msg.sender, _userAddress);
-            _investorIDAddresses[msg.sender][_userID] = false;
-            emit InvestorRemoved(msg.sender, _userAddress);
-        }
-    }
-
-    /**
-     *  @dev sets max balance limit for a bound compliance contract
-     *  @param _newUserMaxBalance max amount of tokens owned by a new user
-     *  @param _investorMaxBalance max amount of tokens owned by an investor
-     *  Only the owner of the Compliance smart contract can call this function
-     *  emits an `MaxBalanceSet` event
-     */
-    function setMaxBalance(uint256 _newUserMaxBalance, uint256 _investorMaxBalance) external onlyComplianceCall {
-        _maxBalance[msg.sender][UserType.New] = _newUserMaxBalance;
-        _maxBalance[msg.sender][UserType.Investor] = _investorMaxBalance;
-
-        emit MaxBalanceSet(msg.sender, _newUserMaxBalance, _investorMaxBalance);
     }
 
     /**
@@ -286,7 +250,7 @@ contract MaxBalanceModule is AbstractModuleUpgradeable {
         address _idTo = _getIdentity(msg.sender, _to);
         _IDBalance[msg.sender][_idTo] += _value;
         _IDBalance[msg.sender][_idFrom] -= _value;
-        if (_IDBalance[msg.sender][_idTo] > getMaxIDBalance(msg.sender, _idTo)) revert MaxBalanceExceeded(msg.sender, _value);
+        if (_IDBalance[msg.sender][_idTo] > getIDMaxBalance(msg.sender, _idTo)) revert MaxBalanceExceeded(msg.sender, _value);
     }
 
     /**
@@ -296,7 +260,7 @@ contract MaxBalanceModule is AbstractModuleUpgradeable {
     function moduleMintAction(address _to, uint256 _value) external override onlyComplianceCall {
         address _idTo = _getIdentity(msg.sender, _to);
         _IDBalance[msg.sender][_idTo] += _value;
-        if (_IDBalance[msg.sender][_idTo] > getMaxIDBalance(msg.sender, _idTo)) revert MaxBalanceExceeded(msg.sender, _value);
+        if (_IDBalance[msg.sender][_idTo] > getIDMaxBalance(msg.sender, _idTo)) revert MaxBalanceExceeded(msg.sender, _value);
     }
 
     /**
@@ -321,26 +285,16 @@ contract MaxBalanceModule is AbstractModuleUpgradeable {
         address _compliance
     ) external view override returns (bool) {
         address _id = _getIdentity(_compliance, _to);
-        uint256 maxIDBalance = getMaxIDBalance(_compliance, _id);
+        uint256 IDMaxBalance = getIDMaxBalance(_compliance, _id);
 
-        if (_value > maxIDBalance) {
+        if (_value > IDMaxBalance) {
             return false;
         }
 
-        if ((_IDBalance[_compliance][_id] + _value) > maxIDBalance) {
+        if ((_IDBalance[_compliance][_id] + _value) > IDMaxBalance) {
             return false;
         }
         return true;
-    }
-
-   /**
-    *  @dev getter for `_investorIDAddresses` mapping
-    *  @param _compliance the Compliance smart contract to be checked
-    *  @param _identity ONCHAINID address
-    *  returns true if ONCHAINID is in the investors list
-    */
-    function isInvestorID(address _compliance, address _identity) external view returns (bool) {
-        return _investorIDAddresses[_compliance][_identity];
     }
 
     /**
@@ -357,12 +311,18 @@ contract MaxBalanceModule is AbstractModuleUpgradeable {
      *  @param _compliance address of the compliance contract
      *  @param _identity ONCHAINID address
      */
-    function getMaxIDBalance(address _compliance, address _identity) public view returns (uint256) {
-        if(_investorIDAddresses[_compliance][_identity]) {
-            return _maxBalance[_compliance][UserType.Investor];
-        }
+    function getIDMaxBalance(address _compliance, address _identity) public view returns (uint256) {
+        uint256 IDMaxBalance = _IDMaxBalance[_compliance][_identity];
 
-        return _maxBalance[_compliance][UserType.New];
+        return (IDMaxBalance != 0 ? IDMaxBalance : _defaultMaxBalance[_compliance]);
+    }
+
+    /**
+     *  @dev getter for compliance default max balance
+     *  @param _compliance address of the compliance contract
+     */
+    function getDefaultMaxBalance(address _compliance) public view returns (uint256) {
+        return _defaultMaxBalance[_compliance];
     }
 
     /**
