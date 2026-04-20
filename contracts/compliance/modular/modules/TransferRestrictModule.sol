@@ -71,22 +71,48 @@ pragma solidity ^0.8.17;
 import "./AbstractModuleUpgradeable.sol";
 
 contract TransferRestrictModule is AbstractModuleUpgradeable {
-    /// allowed user addresses mapping
-    mapping(address => mapping(address => bool)) private _allowedUserAddresses;
+    // ---------------------------------------------------------------------------
+    // Permission bit flags
+    // ---------------------------------------------------------------------------
+
+    /// @notice Bit 0 — address is allowed to receive tokens from another account (regular transfer, as recipient)
+    uint8 public constant PERM_CAN_RECEIVE_FROM_ACCOUNT = 0x01;
+
+    /// @notice Bit 1 — address is allowed to receive freshly minted tokens (mint recipient)
+    uint8 public constant PERM_CAN_RECEIVE_MINT = 0x02;
+
+    /// @notice Bit 2 — address is allowed to send tokens to another account (regular transfer, as sender)
+    uint8 public constant PERM_CAN_SEND = 0x04;
+
+    // ---------------------------------------------------------------------------
+    // Storage
+    // ---------------------------------------------------------------------------
 
     /**
-     *  this event is emitted when a user is allowed for transfer
-     *  `_compliance` is the compliance address.
-     *  `_userAddress` is the allowed user address
+     *  @dev Maps compliance => userAddress => permission bitmask.
+     *  Each bit encodes one of the three permission flags above.
      */
-    event UserAllowed(address _compliance, address _userAddress);
+    mapping(address => mapping(address => uint8)) private _userPermissions;
+
+    // ---------------------------------------------------------------------------
+    // Events
+    // ---------------------------------------------------------------------------
 
     /**
-     *  this event is emitted when a user is disallowed for transfer
-     *  `_compliance` is the compliance address.
-     *  `_userAddress` is the disallowed user address
+     *  @dev Emitted when permissions are granted to a user.
+     *  @param _compliance  the compliance contract address
+     *  @param _userAddress  the user whose permissions changed
+     *  @param _permissions  the bitmask of permissions that were granted
      */
-    event UserDisallowed(address _compliance, address _userAddress);
+    event PermissionsGranted(address indexed _compliance, address indexed _userAddress, uint8 _permissions);
+
+    /**
+     *  @dev Emitted when permissions are revoked from a user.
+     *  @param _compliance  the compliance contract address
+     *  @param _userAddress  the user whose permissions changed
+     *  @param _permissions  the bitmask of permissions that were revoked
+     */
+    event PermissionsRevoked(address indexed _compliance, address indexed _userAddress, uint8 _permissions);
 
     /**
      * @dev initializes the contract and sets the initial state.
@@ -95,56 +121,62 @@ contract TransferRestrictModule is AbstractModuleUpgradeable {
     function initialize() external initializer {
         __AbstractModule_init();
     }
-    
+
     /**
-     *  @dev allows a user address for transfer.
-     *  @param _userAddress is the address of the user
-     *  Only the owner of the Compliance smart contract can call this function
-     *  emits an `UserAllowed` event
+     *  @dev Grants one or more permissions to a user by OR-ing the given bitmask
+     *       into the user's current permissions.
+     *  @param _userAddress  the address of the user
+     *  @param _permissions  bitmask of permissions to grant (use PERM_* constants)
+     *  Only the bound Compliance smart contract can call this function.
+     *  Emits a `PermissionsGranted` event.
      */
-    function allowUser(address _userAddress) external onlyComplianceCall {
-        _allowedUserAddresses[msg.sender][_userAddress] = true;
-        emit UserAllowed(msg.sender, _userAddress);
+    function grantPermissions(address _userAddress, uint8 _permissions) external onlyComplianceCall {
+        _userPermissions[msg.sender][_userAddress] |= _permissions;
+        emit PermissionsGranted(msg.sender, _userAddress, _permissions);
     }
 
     /**
-     *  @dev allows multiple user addresses for transfer.
-     *  @param _userAddresses is the array of user addresses
-     *  Only the owner of the Compliance smart contract can call this function
-     *  emits an `UserAllowed` event
+     *  @dev Revokes one or more permissions from a user by AND-ing the inverted
+     *       bitmask into the user's current permissions.
+     *  @param _userAddress  the address of the user
+     *  @param _permissions  bitmask of permissions to revoke (use PERM_* constants)
+     *  Only the bound Compliance smart contract can call this function.
+     *  Emits a `PermissionsRevoked` event.
      */
-    function batchAllowUsers(address[] memory _userAddresses) external onlyComplianceCall {
+    function revokePermissions(address _userAddress, uint8 _permissions) external onlyComplianceCall {
+        _userPermissions[msg.sender][_userAddress] &= ~_permissions;
+        emit PermissionsRevoked(msg.sender, _userAddress, _permissions);
+    }
+
+    /**
+     *  @dev Grants one or more permissions to multiple users in a single call.
+     *  @param _userAddresses  array of user addresses
+     *  @param _permissions    bitmask of permissions to grant (use PERM_* constants)
+     *  Only the bound Compliance smart contract can call this function.
+     *  Emits a `PermissionsGranted` event for each address.
+     */
+    function batchGrantPermissions(address[] memory _userAddresses, uint8 _permissions) external onlyComplianceCall {
         uint256 length = _userAddresses.length;
         for (uint256 i = 0; i < length; i++) {
-            address _userAddress = _userAddresses[i];
-            _allowedUserAddresses[msg.sender][_userAddress] = true;
-            emit UserAllowed(msg.sender, _userAddress);
+            address user = _userAddresses[i];
+            _userPermissions[msg.sender][user] |= _permissions;
+            emit PermissionsGranted(msg.sender, user, _permissions);
         }
     }
 
     /**
-     *  @dev disallows a user address for transfer.
-     *  @param _userAddress is the address of the user
-     *  Only the owner of the Compliance smart contract can call this function
-     *  emits an `UserDisallowed` event
+     *  @dev Revokes one or more permissions from multiple users in a single call.
+     *  @param _userAddresses  array of user addresses
+     *  @param _permissions    bitmask of permissions to revoke (use PERM_* constants)
+     *  Only the bound Compliance smart contract can call this function.
+     *  Emits a `PermissionsRevoked` event for each address.
      */
-    function disallowUser(address _userAddress) external onlyComplianceCall {
-        _allowedUserAddresses[msg.sender][_userAddress] = false;
-        emit UserDisallowed(msg.sender, _userAddress);
-    }
-
-    /**
-    *  @dev disallows multiple user addresses for transfer.
-     *  @param _userAddresses is the array of user addresses
-     *  Only the owner of the Compliance smart contract can call this function
-     *  emits an `UserDisallowed` event
-     */
-    function batchDisallowUsers(address[] memory _userAddresses) external onlyComplianceCall {
+    function batchRevokePermissions(address[] memory _userAddresses, uint8 _permissions) external onlyComplianceCall {
         uint256 length = _userAddresses.length;
         for (uint256 i = 0; i < length; i++) {
-            address _userAddress = _userAddresses[i];
-            _allowedUserAddresses[msg.sender][_userAddress] = false;
-            emit UserDisallowed(msg.sender, _userAddress);
+            address user = _userAddresses[i];
+            _userPermissions[msg.sender][user] &= ~_permissions;
+            emit PermissionsRevoked(msg.sender, user, _permissions);
         }
     }
 
@@ -171,6 +203,12 @@ contract TransferRestrictModule is AbstractModuleUpgradeable {
 
     /**
      *  @dev See {IModule-moduleCheck}.
+     *
+     *  Transfer rules:
+     *  - Burns  (_to == address(0)):   always allowed.
+     *  - Mints  (_from == address(0)): _to must have PERM_CAN_RECEIVE_MINT.
+     *  - Regular transfers:            _from must have PERM_CAN_SEND
+     *                                  AND _to must have PERM_CAN_RECEIVE_FROM_ACCOUNT.
      */
     function moduleCheck(
         address _from,
@@ -178,25 +216,40 @@ contract TransferRestrictModule is AbstractModuleUpgradeable {
         uint256 /*_value*/,
         address _compliance
     ) external view override returns (bool) {
-        if (_from == address(0) || _to == address(0)) {
+        // Burns are always allowed
+        if (_to == address(0)) {
             return true;
         }
 
-        if (_allowedUserAddresses[_compliance][_from] && _allowedUserAddresses[_compliance][_to]) {
-            return true;
+        // Mint: only allowed recipients of minted tokens may receive
+        if (_from == address(0)) {
+            return _hasPermission(_compliance, _to, PERM_CAN_RECEIVE_MINT);
         }
-        
-        return false;
+
+        // Regular transfer: sender must be allowed to send AND recipient must be allowed to receive
+        return _hasPermission(_compliance, _from, PERM_CAN_SEND)
+            && _hasPermission(_compliance, _to, PERM_CAN_RECEIVE_FROM_ACCOUNT);
     }
 
     /**
-    *  @dev getter for `_allowedUserAddresses` mapping
-    *  @param _compliance the Compliance smart contract to be checked
-    *  @param _userAddress the user address to be checked
-    *  returns the true if user is allowed to transfer
-    */
-    function isUserAllowed(address _compliance, address _userAddress) external view returns (bool) {
-        return _allowedUserAddresses[_compliance][_userAddress];
+     *  @dev Returns the full permission bitmask for a user under a given compliance.
+     *  @param _compliance   the Compliance smart contract address
+     *  @param _userAddress  the user address to query
+     *  @return the uint8 bitmask of all permissions held by the user
+     */
+    function getUserPermissions(address _compliance, address _userAddress) external view returns (uint8) {
+        return _userPermissions[_compliance][_userAddress];
+    }
+
+    /**
+     *  @dev Returns whether a user holds a specific permission (or set of permissions).
+     *  @param _compliance   the Compliance smart contract address
+     *  @param _userAddress  the user address to query
+     *  @param _permission   the permission bitmask to test (use PERM_* constants)
+     *  @return true if the user has ALL bits in `_permission` set
+     */
+    function hasPermission(address _compliance, address _userAddress, uint8 _permission) external view returns (bool) {
+        return _hasPermission(_compliance, _userAddress, _permission);
     }
 
     /**
@@ -218,5 +271,12 @@ contract TransferRestrictModule is AbstractModuleUpgradeable {
      */
     function name() public pure returns (string memory _name) {
         return "TransferRestrictModule";
+    }
+
+    /**
+     *  @dev Returns true when ALL bits in `_permission` are set in the user's stored bitmask.
+     */
+    function _hasPermission(address _compliance, address _user, uint8 _permission) internal view returns (bool) {
+        return (_userPermissions[_compliance][_user] & _permission) == _permission;
     }
 }
